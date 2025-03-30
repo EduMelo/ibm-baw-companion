@@ -1,10 +1,16 @@
-![Build](https://github.com/EduMelo/ibm-baw-companion/actions/workflows/ci.yml/badge.svg)
-
 # IBM BAW Companion
 <p align="center">
   <img src="baw-companion.png" alt="IBM BAW Companion logo" width="256" />
 </p>
 
+<p align="center">
+  <strong>IBM BAW Companion</strong>  
+  <br/>Enhance your IBM BPM experience with automation and smarter navigation
+  <br/><br/>
+  <a href="https://github.com/EduMelo/ibm-baw-companion/actions">
+    <img src="https://github.com/EduMelo/ibm-baw-companion/actions/workflows/ci.yml/badge.svg" alt="Build status" />
+  </a>
+</p>
 
 A Chrome extension that enhances the IBM BAW experience with smarter navigation and productivity tools tailored for developers and analysts.
 
