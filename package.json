@@ -8,6 +8,7 @@
     "code:lint-fix": "eslint --fix",
     "code:prettier": "prettier --write",
     "code:typecheck": "./node_modules/.bin/tsc --noEmit",
+    "build": "webpack --config webpack/webpack.prod.js",
     "app:chrome": "rimraf dist && cross-env BROWSER='chrome' webpack --config webpack/webpack.prod.js",
     "app:chrome-dev": "cross-env BROWSER='chrome' webpack --config webpack/webpack.dev.js --watch",
     "app:edge": "rimraf dist && cross-env BROWSER='edge' webpack --config webpack/webpack.prod.js",
