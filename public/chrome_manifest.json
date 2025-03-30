@@ -1,0 +1,33 @@
+{
+  "name": "IBM BAW Companion",
+  "version": "1.0",
+  "description": "Extensão companheira para o IBM BAW",
+  "permissions": [
+    "declarativeContent",
+    "tabs",
+    "storage"
+  ],
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "images/logo/baw-companion-16.png",
+    "32": "images/logo/baw-companion-32.png",
+    "48": "images/logo/baw-companion-48.png",
+    "128": "images/logo/baw-companion-96.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://ppsa-br.bpm.ibmcloud.com/bpm/dev/ProcessCenter/*",
+        "https://ppsa-br.bpm.ibmcloud.com/bpm/dev/WebPD/*"
+      ],
+      "js": [
+        "app.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html"
+}
