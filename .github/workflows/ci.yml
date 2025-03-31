@@ -18,4 +18,4 @@ jobs:
       - name: Install deps
         run: pnpm install
       - name: Build
-        run: pnpm build
+        run: pnpm app:chrome
