@@ -14,7 +14,7 @@
   "icons": {
     "16": "images/logo/baw-companion-16.png",
     "48": "images/logo/baw-companion-48.png",
-    "128": "images/logo/baw-companion-96.png"
+    "128": "images/logo/baw-companion-128.png"
   },
   "content_scripts": [
     {
