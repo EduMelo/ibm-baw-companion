@@ -5,7 +5,12 @@
   "permissions": [
     "declarativeContent",
     "tabs",
-    "storage"
+    "storage",
+    "scripting",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "*://www.bpm.ibmcloud.com/*"
   ],
   "manifest_version": 3,
   "background": {
@@ -26,6 +31,12 @@
         "app.js"
       ],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["images/logo/*"],
+      "matches": ["<all_urls>"]
     }
   ],
   "options_page": "options.html"

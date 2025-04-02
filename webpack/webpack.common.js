@@ -10,6 +10,7 @@ module.exports = {
     background: path.join(__dirname, `../${SRC_DIR_NAME}/background/${browser}/background.ts`),
     app: path.join(__dirname, '../src/lib/app.ts'),
     options: path.join(__dirname, '../src/options.ts'),
+    injectLoginRedirect: path.resolve(__dirname, "../src/lib/injectLoginRedirect.ts")
   },
   output: {
     path: path.join(__dirname, `../${BUILD_DIR_NAME}`),
@@ -27,6 +28,10 @@ module.exports = {
         test: /\.tsx?$/,
         use: 'ts-loader',
         exclude: /node_modules/,
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
       },
     ],
   },

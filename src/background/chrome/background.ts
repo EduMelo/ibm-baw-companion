@@ -24,3 +24,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+chrome.webNavigation.onCompleted.addListener((details) => {
+  if (details.url.includes("bpm.ibmcloud.com/auth/index.jsp")) {
+    chrome.scripting.executeScript({
+      target: { tabId: details.tabId },
+      files: ["injectLoginRedirect.js"]
+    });
+  }
+});
+
+

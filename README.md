@@ -21,7 +21,7 @@ A Chrome extension that enhances the IBM BAW experience with smarter navigation 
 - 🔁 Automatically reopens the **Process Center** when accessing the **Process Designer**
 - 🧠 Opens the Process Center in the background, to the left of the current tab
 - ✅ Behavior can be toggled via a checkbox on the extension’s settings page
-- 🔒 Uses `chrome.storage` and `chrome.tabs` APIs securely and efficiently
+- 🌐 Allows configuration of the **target hostname** for login redirects
 
 ---
 
@@ -32,6 +32,7 @@ This extension is built to evolve. Future ideas include:
 - 🧹 Sort input/output service attributes alphabetically
 - 📋 Copy content from disabled or read-only fields in the UI
 - 🧪 Modernize the default code editors with better visuals and features
+- 🐞 Improve and extend debugging tools to streamline troubleshooting and development within BAW
 - ⚙️ Add automation tools and power-user enhancements for daily BAW tasks
 - 🔍 Improve navigation and visibility between related artifacts
 
@@ -83,6 +84,8 @@ pnpm build
 
 - `"storage"` – to save user preferences
 - `"tabs"` – to open and manage browser tabs
+- `"webNavigation"` – to inject behavior during login redirect
+- `"scripting"` – to add custom DOM logic dynamically
 
 ---
 
