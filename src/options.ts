@@ -1,14 +1,11 @@
-import './options/options.css';
-
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener('DOMContentLoaded', () => {
   const checkbox = document.getElementById('toggleReopen') as HTMLInputElement;
   const hostnameInput = document.getElementById('hostname') as HTMLInputElement;
 
-  // Carregar valores salvos
   chrome.storage?.sync.get(
     {
       reopenProcessCenterEnabled: true,
-      bawRedirectHostname: ''
+      bawRedirectHostname: '',
     },
     (data) => {
       checkbox.checked = !!data.reopenProcessCenterEnabled;
@@ -16,7 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
-  // Listeners para salvar alterações
   checkbox.addEventListener('change', () => {
     chrome.storage?.sync.set({ reopenProcessCenterEnabled: checkbox.checked });
   });
