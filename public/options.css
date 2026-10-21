@@ -42,3 +42,11 @@ input[type="checkbox"] {
   border-radius: 6px;
   font-size: 1rem;
 }
+
+.option-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #5a6b78;
+  max-width: 420px;
+}

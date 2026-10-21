@@ -28,6 +28,16 @@
       ],
       "js": ["sortTreeItems.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://ppsa-br.bpm.ibmcloud.com/bpm/dev/ProcessInspector/*",
+        "https://ppsa-br.bpm.ibmcloud.com/bpm/test/ProcessInspector/*",
+        "https://ppsa-br.bpm.ibmcloud.com/bpm/run/ProcessInspector/*"
+      ],
+      "js": ["processInspector.js"],
+      "css": ["processInspector.css"],
+      "run_at": "document_idle"
     }
   ],
   "options_page": "options.html"

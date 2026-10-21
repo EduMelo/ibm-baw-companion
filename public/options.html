@@ -18,6 +18,15 @@
       <input type="text" id="hostname" placeholder="ex: ppsa-br.bpm.ibmcloud.com" />
     </div>
 
+    <div class="option-group">
+      <label for="bpmBasicAuth">Autenticação Basic do BPM (usuário:senha)</label>
+      <input type="password" id="bpmBasicAuth" placeholder="usuario:senha" autocomplete="off" />
+      <p class="option-hint">
+        Usada pelo Process Inspector para orquestrar o moveToken reflexivo via REST. O valor é convertido para Base64
+        automaticamente e fica salvo apenas neste navegador.
+      </p>
+    </div>
+
     <script src="options.js"></script>
   </body>
 </html>

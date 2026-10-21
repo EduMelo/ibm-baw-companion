@@ -1,0 +1,287 @@
+/**
+ * Content script injetado nas páginas do Process Inspector
+ * (https://ppsa-br.bpm.ibmcloud.com/bpm/{dev|test|run}/ProcessInspector/...).
+ *
+ * Responsabilidades:
+ *  1. Detectar o ambiente (env) a partir da URL e o piid a partir do painel
+ *     de resumo da instância (InstanceSummary).
+ *  2. Adicionar, ao lado de cada item da lista de tarefas (TasksPane), um
+ *     ícone de "recorrência" que permite reexecutar aquele passo do processo.
+ *  3. Ao clicar no ícone, orquestrar um moveToken reflexivo: busca a
+ *     executionTree da instância via REST, localiza o nó cujo
+ *     createdTaskIDs contenha o taskId da tarefa clicada e então dispara o
+ *     moveToken usando o tokenId/flowObjectId daquele nó.
+ *
+ * Observação sobre seletores: os ids dos widgets Dojo (ex.: "InstanceSummary_31",
+ * "ActionItem_594") incluem um contador incremental que muda a cada carga da
+ * página, então não são estáveis entre sessões. Por isso usamos seletores
+ * baseados em classes e em atributos "data-dojo-attach-point", que fazem
+ * parte do template do widget e são sempre os mesmos.
+ *
+ * Tudo fica dentro de uma IIFE para não vazar identificadores para o escopo
+ * global compartilhado com os demais content scripts (tsconfig usa
+ * "module": "None").
+ */
+(function bawProcessInspector() {
+  const REFLEXIVE_TRIGGER_CLASS = 'baw-reflexive-btn';
+  const REFLEXIVE_LOADING_CLASS = 'baw-reflexive-loading';
+  const BOUND_ATTR = 'data-baw-reflexive-bound';
+
+  interface ExecutionTreeNode {
+    name?: string | null;
+    nodeId?: string | null;
+    flowObjectId?: string | null;
+    tokenId?: string | null;
+    createdTaskIDs?: Array<string | number> | null;
+    children?: ExecutionTreeNode[] | null;
+    [key: string]: unknown;
+  }
+
+  function isHtmlElement(node: Element | null): node is HTMLElement {
+    return !!node && node.nodeType === Node.ELEMENT_NODE;
+  }
+
+  /** Extrai o env (dev | test | run) a partir do caminho atual da URL. */
+  function getCurrentEnv(): string | null {
+    const match = window.location.pathname.match(/\/bpm\/([^/]+)\/ProcessInspector\b/i);
+    return match ? match[1] : null;
+  }
+
+  /** Extrai o piid a partir do painel "Instance ID" do resumo da instância. */
+  function getCurrentPiid(): string | null {
+    const valueNode = document.querySelector('.summaryNode [data-dojo-attach-point="instanceId"]');
+    const text = valueNode?.textContent?.trim();
+    return text || null;
+  }
+
+  /** Extrai o número entre colchetes no final do texto (o taskId). */
+  function extractTaskId(source: string | null | undefined): string | null {
+    if (!source) return null;
+    const match = source.match(/\[(\d+)\]\s*$/);
+    return match ? match[1] : null;
+  }
+
+  function buildProcessApiUrl(env: string, piid: string, query: string): string {
+    const base = `${window.location.origin}/bpm/${encodeURIComponent(env)}/rest/bpm/wle/v1/process/${encodeURIComponent(piid)}`;
+    return `${base}?${query}`;
+  }
+
+  /** Codifica uma string (potencialmente com acentos) em Base64 de forma segura. */
+  function base64EncodeUtf8(input: string): string {
+    const bytes = new TextEncoder().encode(input);
+    let binary = '';
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+
+  /** Lê a credencial configurada na página de opções e monta o header Basic. */
+  function getBasicAuthHeader(): Promise<string | null> {
+    return new Promise((resolve) => {
+      if (typeof chrome === 'undefined' || !chrome.storage?.local) {
+        resolve(null);
+        return;
+      }
+      chrome.storage.local.get({ bpmBasicAuthCredentials: '' }, (data) => {
+        const raw = String(data.bpmBasicAuthCredentials || '').trim();
+        resolve(raw ? `Basic ${base64EncodeUtf8(raw)}` : null);
+      });
+    });
+  }
+
+  /** Busca recursivamente, em toda a executionTree, o nó que criou o taskId informado. */
+  function findNodeByTaskId(node: ExecutionTreeNode | null | undefined, taskId: string): ExecutionTreeNode | null {
+    if (!node) return null;
+    if (Array.isArray(node.createdTaskIDs) && node.createdTaskIDs.some((id) => String(id) === taskId)) {
+      return node;
+    }
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) {
+        const found = findNodeByTaskId(child, taskId);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  function ensureToastContainer(): HTMLElement {
+    let container = document.querySelector('.baw-reflexive-toast-container') as HTMLElement | null;
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'baw-reflexive-toast-container';
+      document.body.appendChild(container);
+    }
+    return container;
+  }
+
+  function showToast(message: string, kind: 'success' | 'error'): void {
+    const container = ensureToastContainer();
+    const toast = document.createElement('div');
+    toast.className = `baw-reflexive-toast ${kind}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('baw-visible'));
+
+    window.setTimeout(() => {
+      toast.classList.remove('baw-visible');
+      window.setTimeout(() => toast.remove(), 250);
+    }, 4500);
+  }
+
+  function setTriggerLoading(trigger: HTMLElement, loading: boolean): void {
+    trigger.classList.toggle(REFLEXIVE_LOADING_CLASS, loading);
+  }
+
+  /** Ícone de "recorrência" (duas setas formando um laço), estilo Material "autorenew". */
+  function createRecurrenceIcon(): SVGSVGElement {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg') as unknown as SVGSVGElement;
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '14');
+    svg.setAttribute('height', '14');
+    svg.setAttribute('focusable', 'false');
+    svg.setAttribute('aria-hidden', 'true');
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute(
+      'd',
+      'M12 6V3L8 7l4 4V8c2.76 0 5 2.24 5 5 0 .51-.1 1-.24 1.46l1.52 1.52c.46-.86.72-1.84.72-2.98 0-3.86-3.14-7-7-7zm0 12c-2.76 0-5-2.24-5-5 0-.51.1-1 .24-1.46L5.72 10.02C5.26 10.88 5 11.86 5 13c0 3.86 3.14 7 7 7v3l4-4-4-4v3z'
+    );
+    path.setAttribute('fill', 'currentColor');
+    svg.appendChild(path);
+    return svg;
+  }
+
+  /** Executa o GET da executionTree, localiza o nó da tarefa e dispara o POST moveToken. */
+  async function runReflexiveMoveToken(taskId: string, trigger: HTMLElement): Promise<void> {
+    const env = getCurrentEnv();
+    const piid = getCurrentPiid();
+
+    if (!env || !piid) {
+      showToast('BAW Companion: não foi possível identificar o ambiente (env) ou a instância (piid) desta página.', 'error');
+      return;
+    }
+
+    const authHeader = await getBasicAuthHeader();
+    if (!authHeader) {
+      showToast('BAW Companion: configure a autenticação Basic na página de opções da extensão.', 'error');
+      return;
+    }
+
+    setTriggerLoading(trigger, true);
+    try {
+      const treeUrl = buildProcessApiUrl(env, piid, 'parts=executionTree');
+      const treeResponse = await fetch(treeUrl, {
+        method: 'GET',
+        headers: { Authorization: authHeader, Accept: 'application/json' },
+      });
+      if (!treeResponse.ok) {
+        throw new Error(`Falha ao consultar executionTree (HTTP ${treeResponse.status}).`);
+      }
+      const treePayload = await treeResponse.json();
+      const root: ExecutionTreeNode | undefined = treePayload?.data?.executionTree?.root;
+      const node = findNodeByTaskId(root, taskId);
+
+      if (!node) {
+        throw new Error(`Tarefa ${taskId} não foi encontrada na executionTree da instância.`);
+      }
+      if (!node.tokenId || !node.flowObjectId) {
+        throw new Error(`Tarefa ${taskId} foi encontrada, mas sem tokenId/flowObjectId na executionTree.`);
+      }
+
+      const moveUrl = buildProcessApiUrl(
+        env,
+        piid,
+        `action=moveToken&tokenId=${encodeURIComponent(String(node.tokenId))}&target=${encodeURIComponent(
+          String(node.flowObjectId)
+        )}&parts=executionTree`
+      );
+      const moveResponse = await fetch(moveUrl, {
+        method: 'POST',
+        headers: { Authorization: authHeader, Accept: 'application/json' },
+      });
+      if (!moveResponse.ok) {
+        throw new Error(`Falha ao executar moveToken (HTTP ${moveResponse.status}).`);
+      }
+      await moveResponse.json().catch(() => null);
+
+      showToast(`moveToken reflexivo executado com sucesso para a tarefa ${taskId}.`, 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('BAW Companion: falha no moveToken reflexivo.', error);
+      showToast(message, 'error');
+    } finally {
+      setTriggerLoading(trigger, false);
+    }
+  }
+
+  function createReflexiveTrigger(taskId: string): HTMLElement {
+    const trigger = document.createElement('span');
+    trigger.className = REFLEXIVE_TRIGGER_CLASS;
+    trigger.setAttribute('role', 'button');
+    trigger.setAttribute('tabindex', '0');
+    trigger.setAttribute('aria-label', `Executar moveToken reflexivo da tarefa ${taskId}`);
+    trigger.title = `Executar moveToken reflexivo (tarefa ${taskId})`;
+    trigger.dataset.bawTaskId = taskId;
+    trigger.appendChild(createRecurrenceIcon());
+
+    const activate = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void runReflexiveMoveToken(taskId, trigger);
+    };
+
+    trigger.addEventListener('click', activate);
+    trigger.addEventListener('keydown', (event) => {
+      const key = (event as KeyboardEvent).key;
+      if (key === 'Enter' || key === ' ') activate(event);
+    });
+
+    return trigger;
+  }
+
+  /** Varre o painel de tarefas e adiciona o ícone de recorrência aos itens ainda não processados. */
+  function installReflexiveIcons(root: ParentNode): void {
+    const actionItems = Array.from(root.querySelectorAll('.actionItem')).filter(isHtmlElement);
+
+    for (const item of actionItems) {
+      const button = item.querySelector('button') as HTMLButtonElement | null;
+      if (!button) continue;
+
+      const label = button.querySelector('.labelText');
+      if (!isHtmlElement(label) || label.hasAttribute(BOUND_ATTR)) continue;
+
+      const taskId = extractTaskId(button.title) || extractTaskId(label.textContent);
+      if (!taskId) continue;
+
+      label.setAttribute(BOUND_ATTR, 'true');
+      const trigger = createReflexiveTrigger(taskId);
+      label.insertAdjacentElement('afterend', trigger);
+    }
+  }
+
+  function bootReflexiveIcons(): void {
+    if (!location.pathname.includes('/ProcessInspector/')) return;
+    if (!document.body) return;
+
+    let scheduled = false;
+    const schedule = () => {
+      if (scheduled) return;
+      scheduled = true;
+      window.setTimeout(() => {
+        scheduled = false;
+        installReflexiveIcons(document);
+      }, 200);
+    };
+
+    installReflexiveIcons(document);
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    console.log('🔁 BAW Companion: moveToken reflexivo pronto no Process Inspector.');
+  }
+
+  bootReflexiveIcons();
+})();

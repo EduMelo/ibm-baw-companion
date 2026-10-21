@@ -4,7 +4,7 @@
   "description": "Chrome extension that enhances the IBM BAW experience",
   "private": true,
   "scripts": {
-    "build": "rm -rf dist && tsc && cp public/manifest.json public/options.html public/options.css dist/ && cp -r public/images dist/images",
+    "build": "rm -rf dist && tsc && cp public/manifest.json public/options.html public/options.css public/processInspector.css dist/ && cp -r public/images dist/images",
     "dev": "pnpm build && tsc --watch"
   },
   "repository": {

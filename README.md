@@ -23,6 +23,11 @@ A Chrome extension that enhances the IBM BAW experience with smarter navigation 
 - Opens the Process Center in the background, to the left of the current tab
 - Behavior can be toggled via a checkbox on the extension’s settings page
 - Allows configuration of the **target hostname** for login redirects
+- On **Process Inspector** pages (dev/test/run), adds a reflexive "recurrence" icon next to
+  each task in the Tasks pane, letting you replay that step via a `moveToken` REST
+  orchestration (looks up the task's node in the instance's `executionTree` and moves a
+  token back to its `flowObjectId`)
+- Allows configuring the **Basic Authentication** credentials used to call the BPM REST API
 
 ---
 
