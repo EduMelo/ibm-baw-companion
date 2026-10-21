@@ -4,7 +4,7 @@
   "description": "Extensão companheira para o IBM BAW",
   "manifest_version": 3,
   "permissions": ["tabs", "storage", "scripting", "webNavigation"],
-  "host_permissions": ["*://www.bpm.ibmcloud.com/*"],
+  "host_permissions": ["*://www.bpm.ibmcloud.com/*", "https://*.bpm.ibmcloud.com/*"],
   "background": {
     "service_worker": "background.js"
   },
@@ -20,6 +20,13 @@
         "https://ppsa-br.bpm.ibmcloud.com/bpm/dev/WebPD/*"
       ],
       "js": ["app.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://ppsa-br.bpm.ibmcloud.com/bpm/dev/WebPD/*"
+      ],
+      "js": ["sortTreeItems.js"],
       "run_at": "document_idle"
     }
   ],
