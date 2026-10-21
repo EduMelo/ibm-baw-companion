@@ -10,7 +10,8 @@
  *  3. Ao clicar no ícone, orquestrar um moveToken reflexivo: busca a
  *     executionTree da instância via REST, localiza o nó cujo
  *     createdTaskIDs contenha o taskId da tarefa clicada e então dispara o
- *     moveToken usando o tokenId/flowObjectId daquele nó.
+ *     moveToken usando o tokenId/flowObjectId daquele nó. Ao final, clica no
+ *     botão "Refresh" da toolbar para recarregar o estado da instância.
  *
  * Observação sobre seletores: os ids dos widgets Dojo (ex.: "InstanceSummary_31",
  * "ActionItem_594") incluem um contador incremental que muda a cada carga da
@@ -134,6 +135,26 @@
     trigger.classList.toggle(REFLEXIVE_LOADING_CLASS, loading);
   }
 
+  /**
+   * Localiza o botão "Refresh" da toolbar do Process Inspector. Assim como os
+   * demais seletores deste arquivo, evita o id numérico dinâmico (ex.:
+   * "ActionItem_180") e usa classe + title, que são estáveis entre sessões.
+   */
+  function findRefreshButton(): HTMLElement | null {
+    const button = document.querySelector('.actionItem button.labelAndIconNode.refresh[title="Refresh"]');
+    return isHtmlElement(button) ? button : null;
+  }
+
+  /** Clica no botão de Refresh para que o Process Inspector recarregue os dados da instância. */
+  function clickRefreshButton(): void {
+    const button = findRefreshButton();
+    if (!button) {
+      console.warn('BAW Companion: botão de Refresh não encontrado para atualizar o Process Inspector.');
+      return;
+    }
+    button.click();
+  }
+
   /** Ícone de "recorrência" (duas setas formando um laço), estilo Material "autorenew". */
   function createRecurrenceIcon(): SVGSVGElement {
     const svgNS = 'http://www.w3.org/2000/svg';
@@ -206,6 +227,10 @@
         throw new Error(`Falha ao executar moveToken (HTTP ${moveResponse.status}).`);
       }
       await moveResponse.json().catch(() => null);
+
+      // Ao final da orquestração, clica no "Refresh" da toolbar para que o
+      // Process Inspector recarregue o estado atualizado da instância.
+      clickRefreshButton();
 
       showToast(`moveToken reflexivo executado com sucesso para a tarefa ${taskId}.`, 'success');
     } catch (error) {
