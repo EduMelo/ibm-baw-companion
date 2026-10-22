@@ -27,6 +27,8 @@ A Chrome extension that enhances the IBM BAW experience with smarter navigation 
   each task in the Tasks pane, letting you replay that step via a `moveToken` REST
   orchestration (looks up the task's node in the instance's `executionTree` and moves a
   token back to its `flowObjectId`)
+- Adds a command row right below the instance summary with a launch icon that opens the
+  same instance in the **Process Portal** (`launchInstanceUI`)
 - Allows configuring the **Basic Authentication** credentials used to call the BPM REST API
 
 ---

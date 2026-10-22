@@ -12,6 +12,9 @@
  *     createdTaskIDs contenha o taskId da tarefa clicada e então dispara o
  *     moveToken usando o tokenId/flowObjectId daquele nó. Ao final, clica no
  *     botão "Refresh" da toolbar para recarregar o estado da instância.
+ *  4. Adicionar, logo abaixo do painel de resumo da instância (summaryNode),
+ *     uma linha de comandos com um ícone que abre a mesma instância no
+ *     Process Portal (launchInstanceUI).
  *
  * Observação sobre seletores: os ids dos widgets Dojo (ex.: "InstanceSummary_31",
  * "ActionItem_594") incluem um contador incremental que muda a cada carga da
@@ -27,6 +30,9 @@
   const REFLEXIVE_TRIGGER_CLASS = 'baw-reflexive-btn';
   const REFLEXIVE_LOADING_CLASS = 'baw-reflexive-loading';
   const BOUND_ATTR = 'data-baw-reflexive-bound';
+  const COMMANDS_ROW_CLASS = 'baw-instance-commands-row';
+  const LAUNCH_TRIGGER_CLASS = 'baw-launch-btn';
+  const COMMANDS_BOUND_ATTR = 'data-baw-commands-bound';
 
   interface ExecutionTreeNode {
     name?: string | null;
@@ -65,6 +71,13 @@
   function buildProcessApiUrl(env: string, piid: string, query: string): string {
     const base = `${window.location.origin}/bpm/${encodeURIComponent(env)}/rest/bpm/wle/v1/process/${encodeURIComponent(piid)}`;
     return `${base}?${query}`;
+  }
+
+  /** Monta a URL do Process Portal que abre a UI da instância em execução. */
+  function buildProcessPortalLaunchUrl(env: string, piid: string): string {
+    return `${window.location.origin}/bpm/${encodeURIComponent(env)}/ProcessPortal/launchInstanceUI?instanceId=${encodeURIComponent(
+      piid
+    )}`;
   }
 
   /** Codifica uma string (potencialmente com acentos) em Base64 de forma segura. */
@@ -175,7 +188,25 @@
     return svg;
   }
 
-  /** Executa o GET da executionTree, localiza o nó da tarefa e dispara o POST moveToken. */
+  /** Ícone de "abrir externamente" (estilo Material "open_in_new"), usado para o launch no Process Portal. */
+  function createLaunchIcon(): SVGSVGElement {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg') as unknown as SVGSVGElement;
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '14');
+    svg.setAttribute('height', '14');
+    svg.setAttribute('focusable', 'false');
+    svg.setAttribute('aria-hidden', 'true');
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute(
+      'd',
+      'M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19.59 6.41V10H21V3h-7z'
+    );
+    path.setAttribute('fill', 'currentColor');
+    svg.appendChild(path);
+    return svg;
+  }
   async function runReflexiveMoveToken(taskId: string, trigger: HTMLElement): Promise<void> {
     const env = getCurrentEnv();
     const piid = getCurrentPiid();
@@ -287,9 +318,69 @@
     }
   }
 
-  function bootReflexiveIcons(): void {
+  /** Cria a linha de comandos com o botão que abre a instância no Process Portal. */
+  function createInstanceCommandsRow(): HTMLElement {
+    const row = document.createElement('div');
+    row.className = COMMANDS_ROW_CLASS;
+
+    const trigger = document.createElement('span');
+    trigger.className = LAUNCH_TRIGGER_CLASS;
+    trigger.setAttribute('role', 'button');
+    trigger.setAttribute('tabindex', '0');
+    trigger.setAttribute('aria-label', 'Abrir instância no Process Portal');
+    trigger.title = 'Abrir instância no Process Portal (launchInstanceUI)';
+    trigger.appendChild(createLaunchIcon());
+
+    const activate = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const env = getCurrentEnv();
+      const piid = getCurrentPiid();
+      if (!env || !piid) {
+        showToast('BAW Companion: não foi possível identificar o ambiente (env) ou a instância (piid) desta página.', 'error');
+        return;
+      }
+
+      window.location.href = buildProcessPortalLaunchUrl(env, piid);
+    };
+
+    trigger.addEventListener('click', activate);
+    trigger.addEventListener('keydown', (event) => {
+      const key = (event as KeyboardEvent).key;
+      if (key === 'Enter' || key === ' ') activate(event);
+    });
+
+    row.appendChild(trigger);
+    return row;
+  }
+
+  /** Insere, logo abaixo do resumo da instância (summaryNode), a linha de comandos com o botão de launch. */
+  function installInstanceCommandsRow(root: ParentNode): void {
+    const summaryNodes = Array.from(root.querySelectorAll('.summaryNode')).filter(isHtmlElement);
+
+    for (const summary of summaryNodes) {
+      // O widget InstanceSummary usa ".summaryNode" tanto para o painel principal
+      // (Instance ID, Status, ...) quanto para um painel secundário de erros em
+      // sub-processos (".summaryNode.errorsInSTPs", normalmente de altura zero
+      // pois todas as suas linhas ficam "hidden"). Só o painel principal tem o
+      // attach point "instanceId"; sem esse filtro o botão aparecia duplicado.
+      if (!summary.querySelector('[data-dojo-attach-point="instanceId"]')) continue;
+      if (summary.hasAttribute(COMMANDS_BOUND_ATTR)) continue;
+      summary.setAttribute(COMMANDS_BOUND_ATTR, 'true');
+      const row = createInstanceCommandsRow();
+      summary.insertAdjacentElement('afterend', row);
+    }
+  }
+
+  function bootProcessInspectorEnhancements(): void {
     if (!location.pathname.includes('/ProcessInspector/')) return;
     if (!document.body) return;
+
+    const installAll = (root: ParentNode) => {
+      installReflexiveIcons(root);
+      installInstanceCommandsRow(root);
+    };
 
     let scheduled = false;
     const schedule = () => {
@@ -297,16 +388,16 @@
       scheduled = true;
       window.setTimeout(() => {
         scheduled = false;
-        installReflexiveIcons(document);
+        installAll(document);
       }, 200);
     };
 
-    installReflexiveIcons(document);
+    installAll(document);
     const observer = new MutationObserver(schedule);
     observer.observe(document.body, { childList: true, subtree: true });
 
-    console.log('🔁 BAW Companion: moveToken reflexivo pronto no Process Inspector.');
+    console.log('🔁 BAW Companion: moveToken reflexivo e atalho do Process Portal prontos no Process Inspector.');
   }
 
-  bootReflexiveIcons();
+  bootProcessInspectorEnhancements();
 })();

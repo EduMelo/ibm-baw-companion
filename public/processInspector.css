@@ -73,3 +73,30 @@
 .baw-reflexive-toast.error {
   background: #da1e28;
 }
+
+.baw-instance-commands-row {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.baw-launch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border-radius: 4px;
+  color: #0f62fe;
+  cursor: pointer;
+}
+
+.baw-launch-btn:hover {
+  background: rgba(15, 98, 254, 0.12);
+}
+
+.baw-launch-btn:focus-visible {
+  outline: 2px solid #0f62fe;
+  outline-offset: 2px;
+}
