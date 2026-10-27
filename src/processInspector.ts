@@ -14,7 +14,8 @@
  *     botão "Refresh" da toolbar para recarregar o estado da instância.
  *  4. Adicionar, logo abaixo do painel de resumo da instância (summaryNode),
  *     uma linha de comandos com um ícone que abre a mesma instância no
- *     Process Portal (launchInstanceUI).
+ *     Process Portal (launchInstanceUI) em uma nova aba, sem fechar o
+ *     Process Inspector.
  *
  * Observação sobre seletores: os ids dos widgets Dojo (ex.: "InstanceSummary_31",
  * "ActionItem_594") incluem um contador incremental que muda a cada carga da
@@ -318,7 +319,7 @@
     }
   }
 
-  /** Cria a linha de comandos com o botão que abre a instância no Process Portal. */
+  /** Cria a linha de comandos com o botão que abre a instância no Process Portal (em nova aba). */
   function createInstanceCommandsRow(): HTMLElement {
     const row = document.createElement('div');
     row.className = COMMANDS_ROW_CLASS;
@@ -327,8 +328,8 @@
     trigger.className = LAUNCH_TRIGGER_CLASS;
     trigger.setAttribute('role', 'button');
     trigger.setAttribute('tabindex', '0');
-    trigger.setAttribute('aria-label', 'Abrir instância no Process Portal');
-    trigger.title = 'Abrir instância no Process Portal (launchInstanceUI)';
+    trigger.setAttribute('aria-label', 'Abrir instância no Process Portal em uma nova aba');
+    trigger.title = 'Abrir instância no Process Portal em uma nova aba (launchInstanceUI)';
     trigger.appendChild(createLaunchIcon());
 
     const activate = (event: Event) => {
@@ -342,7 +343,7 @@
         return;
       }
 
-      window.location.href = buildProcessPortalLaunchUrl(env, piid);
+      window.open(buildProcessPortalLaunchUrl(env, piid), '_blank', 'noopener,noreferrer');
     };
 
     trigger.addEventListener('click', activate);
