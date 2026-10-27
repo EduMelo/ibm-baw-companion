@@ -30,7 +30,8 @@ A Chrome extension that enhances the IBM BAW experience with smarter navigation 
 - On **Process Inspector** pages (dev/test/run), adds a reflexive "recurrence" icon next to
   each task in the Tasks pane, letting you replay that step via a `moveToken` REST
   orchestration (looks up the task's node in the instance's `executionTree` and moves a
-  token back to its `flowObjectId`)
+  token back to its `flowObjectId`). Requires an explicit confirmation: clicking the icon
+  shows an accept/decline pair next to it, and the orchestration only runs if you accept
 - Adds a command row right below the instance summary with a launch icon that opens the
   same instance in the **Process Portal** (`launchInstanceUI`) in a new tab, keeping the
   Process Inspector tab open

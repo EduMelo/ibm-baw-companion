@@ -100,3 +100,53 @@
   outline: 2px solid #0f62fe;
   outline-offset: 2px;
 }
+
+.baw-reflexive-confirm-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: baw-reflexive-confirm-in 0.12s ease-out;
+}
+
+@keyframes baw-reflexive-confirm-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.baw-reflexive-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.baw-reflexive-confirm-btn.baw-confirm-accept {
+  color: #24a148;
+}
+
+.baw-reflexive-confirm-btn.baw-confirm-accept:hover {
+  background: rgba(36, 161, 72, 0.15);
+}
+
+.baw-reflexive-confirm-btn.baw-confirm-decline {
+  color: #da1e28;
+}
+
+.baw-reflexive-confirm-btn.baw-confirm-decline:hover {
+  background: rgba(218, 30, 40, 0.15);
+}
+
+.baw-reflexive-confirm-btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}

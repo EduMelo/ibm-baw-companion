@@ -7,11 +7,14 @@
  *     de resumo da instância (InstanceSummary).
  *  2. Adicionar, ao lado de cada item da lista de tarefas (TasksPane), um
  *     ícone de "recorrência" que permite reexecutar aquele passo do processo.
- *  3. Ao clicar no ícone, orquestrar um moveToken reflexivo: busca a
- *     executionTree da instância via REST, localiza o nó cujo
- *     createdTaskIDs contenha o taskId da tarefa clicada e então dispara o
- *     moveToken usando o tokenId/flowObjectId daquele nó. Ao final, clica no
- *     botão "Refresh" da toolbar para recarregar o estado da instância.
+ *  3. Ao clicar no ícone, exibir um par de botões de confirmação (aceitar/
+ *     recusar) ao lado dele. Só ao aceitar é que a orquestração do moveToken
+ *     reflexivo é disparada de fato: busca a executionTree da instância via
+ *     REST, localiza o nó cujo createdTaskIDs contenha o taskId da tarefa
+ *     clicada e então dispara o moveToken usando o tokenId/flowObjectId
+ *     daquele nó. Ao final, clica no botão "Refresh" da toolbar para
+ *     recarregar o estado da instância. Recusar (ou clicar de novo no ícone)
+ *     apenas fecha os botões, sem nenhuma chamada à API.
  *  4. Adicionar, logo abaixo do painel de resumo da instância (summaryNode),
  *     uma linha de comandos com um ícone que abre a mesma instância no
  *     Process Portal (launchInstanceUI) em uma nova aba, sem fechar o
@@ -34,6 +37,8 @@
   const COMMANDS_ROW_CLASS = 'baw-instance-commands-row';
   const LAUNCH_TRIGGER_CLASS = 'baw-launch-btn';
   const COMMANDS_BOUND_ATTR = 'data-baw-commands-bound';
+  const CONFIRM_GROUP_CLASS = 'baw-reflexive-confirm-group';
+  const CONFIRM_BTN_CLASS = 'baw-reflexive-confirm-btn';
 
   interface ExecutionTreeNode {
     name?: string | null;
@@ -208,6 +213,44 @@
     svg.appendChild(path);
     return svg;
   }
+
+  /** Ícone de "confirmar" (check), estilo Material "check". */
+  function createCheckIcon(): SVGSVGElement {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg') as unknown as SVGSVGElement;
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '13');
+    svg.setAttribute('height', '13');
+    svg.setAttribute('focusable', 'false');
+    svg.setAttribute('aria-hidden', 'true');
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', 'M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z');
+    path.setAttribute('fill', 'currentColor');
+    svg.appendChild(path);
+    return svg;
+  }
+
+  /** Ícone de "cancelar" (x), estilo Material "close". */
+  function createCloseIcon(): SVGSVGElement {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg') as unknown as SVGSVGElement;
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '13');
+    svg.setAttribute('height', '13');
+    svg.setAttribute('focusable', 'false');
+    svg.setAttribute('aria-hidden', 'true');
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute(
+      'd',
+      'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'
+    );
+    path.setAttribute('fill', 'currentColor');
+    svg.appendChild(path);
+    return svg;
+  }
+
   async function runReflexiveMoveToken(taskId: string, trigger: HTMLElement): Promise<void> {
     const env = getCurrentEnv();
     const piid = getCurrentPiid();
@@ -274,20 +317,92 @@
     }
   }
 
+  /**
+   * Cria o par de botões de confirmação (aceitar/recusar) e os insere logo
+   * após o ícone de recorrência. Só chama runReflexiveMoveToken se o usuário
+   * confirmar clicando em "aceitar"; "recusar" (ou clicar de novo no ícone
+   * original) apenas remove os botões, sem nenhuma chamada à API.
+   */
+  function showReflexiveConfirmation(trigger: HTMLElement, taskId: string): void {
+    if (trigger.nextElementSibling?.classList.contains(CONFIRM_GROUP_CLASS)) return;
+
+    const group = document.createElement('span');
+    group.className = CONFIRM_GROUP_CLASS;
+
+    const removeGroup = () => group.remove();
+
+    const acceptBtn = document.createElement('span');
+    acceptBtn.className = `${CONFIRM_BTN_CLASS} baw-confirm-accept`;
+    acceptBtn.setAttribute('role', 'button');
+    acceptBtn.setAttribute('tabindex', '0');
+    acceptBtn.setAttribute('aria-label', `Confirmar moveToken reflexivo da tarefa ${taskId}`);
+    acceptBtn.title = 'Confirmar';
+    acceptBtn.appendChild(createCheckIcon());
+
+    const declineBtn = document.createElement('span');
+    declineBtn.className = `${CONFIRM_BTN_CLASS} baw-confirm-decline`;
+    declineBtn.setAttribute('role', 'button');
+    declineBtn.setAttribute('tabindex', '0');
+    declineBtn.setAttribute('aria-label', `Cancelar moveToken reflexivo da tarefa ${taskId}`);
+    declineBtn.title = 'Cancelar';
+    declineBtn.appendChild(createCloseIcon());
+
+    const bindActivate = (el: HTMLElement, handler: (event: Event) => void) => {
+      el.addEventListener('click', handler);
+      el.addEventListener('keydown', (event) => {
+        const key = (event as KeyboardEvent).key;
+        if (key === 'Enter' || key === ' ') handler(event);
+      });
+    };
+
+    bindActivate(acceptBtn, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      removeGroup();
+      void runReflexiveMoveToken(taskId, trigger);
+    });
+
+    bindActivate(declineBtn, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      removeGroup();
+    });
+
+    group.addEventListener('keydown', (event) => {
+      if ((event as KeyboardEvent).key === 'Escape') {
+        event.stopPropagation();
+        removeGroup();
+      }
+    });
+
+    group.appendChild(acceptBtn);
+    group.appendChild(declineBtn);
+    trigger.insertAdjacentElement('afterend', group);
+  }
+
   function createReflexiveTrigger(taskId: string): HTMLElement {
     const trigger = document.createElement('span');
     trigger.className = REFLEXIVE_TRIGGER_CLASS;
     trigger.setAttribute('role', 'button');
     trigger.setAttribute('tabindex', '0');
-    trigger.setAttribute('aria-label', `Executar moveToken reflexivo da tarefa ${taskId}`);
-    trigger.title = `Executar moveToken reflexivo (tarefa ${taskId})`;
+    trigger.setAttribute('aria-label', `Pedir confirmação para o moveToken reflexivo da tarefa ${taskId}`);
+    trigger.title = `Repetir tarefa ${taskId} (pede confirmação antes de executar)`;
     trigger.dataset.bawTaskId = taskId;
     trigger.appendChild(createRecurrenceIcon());
 
     const activate = (event: Event) => {
       event.preventDefault();
       event.stopPropagation();
-      void runReflexiveMoveToken(taskId, trigger);
+      if (trigger.classList.contains(REFLEXIVE_LOADING_CLASS)) return;
+
+      const existing = trigger.nextElementSibling;
+      if (existing?.classList.contains(CONFIRM_GROUP_CLASS)) {
+        // Clicar de novo no ícone enquanto a confirmação está aberta cancela.
+        existing.remove();
+        return;
+      }
+
+      showReflexiveConfirmation(trigger, taskId);
     };
 
     trigger.addEventListener('click', activate);
