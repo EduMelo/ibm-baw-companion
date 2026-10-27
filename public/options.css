@@ -50,3 +50,20 @@ input[type="checkbox"] {
   color: #5a6b78;
   max-width: 420px;
 }
+
+.option-checkbox-label {
+  margin-bottom: 0 !important;
+}
+
+.badge-experimental {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #7a4100;
+  background: #ffe8b8;
+  border: 1px solid #f0b429;
+}

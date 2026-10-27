@@ -1,0 +1,40 @@
+.baw-sort-toast-container {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.baw-sort-toast {
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 320px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.baw-sort-toast.baw-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.baw-sort-toast.info {
+  background: #0f62fe;
+}
+
+.baw-sort-toast.success {
+  background: #24a148;
+}
+
+.baw-sort-toast.error {
+  background: #da1e28;
+}

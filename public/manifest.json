@@ -27,6 +27,7 @@
         "https://ppsa-br.bpm.ibmcloud.com/bpm/dev/WebPD/*"
       ],
       "js": ["sortTreeItems.js"],
+      "css": ["sortTreeItems.css"],
       "run_at": "document_idle"
     },
     {

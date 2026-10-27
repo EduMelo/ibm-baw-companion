@@ -23,6 +23,10 @@ A Chrome extension that enhances the IBM BAW experience with smarter navigation 
 - Opens the Process Center in the background, to the left of the current tab
 - Behavior can be toggled via a checkbox on the extension’s settings page
 - Allows configuration of the **target hostname** for login redirects
+- Adds an **A–Z** sort button next to actionable tree lists in the Process Designer
+  (e.g., service input/output attributes), with a pop-up that shows sorting progress
+  and turns green when finished. **Experimental**, opt-in — disabled by default, enable it
+  on the settings page
 - On **Process Inspector** pages (dev/test/run), adds a reflexive "recurrence" icon next to
   each task in the Tasks pane, letting you replay that step via a `moveToken` REST
   orchestration (looks up the task's node in the instance's `executionTree` and moves a
